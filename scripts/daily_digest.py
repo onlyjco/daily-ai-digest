@@ -96,12 +96,11 @@ def format_repo(item):
 
     lines = [line]
     if desc:
-        # Truncate long descriptions
         short_desc = textwrap.shorten(desc, width=140, placeholder="...")
-        lines.append(f"  {short_desc}")
+        lines.append(f"  📝 {short_desc}")
     if topics:
         topic_tags = " ".join(f"`{t}`" for t in topics[:5])
-        lines.append(f"  {topic_tags}")
+        lines.append(f"  🏷️ {topic_tags}")
     return "\n".join(lines)
 
 
@@ -126,7 +125,15 @@ def fetch_news():
                 # Strip HTML tags
                 plain = re.sub(r"<[^>]+>", "", summary_html)
                 plain = plain.replace("\n", " ").strip()
-                summary = textwrap.shorten(plain, width=200, placeholder="...") if plain else ""
+                # 清理英文元数据
+                clean = re.sub(r'Article URL:.*?(?=\s|$)', '', plain)
+                clean = re.sub(r'Comments URL:.*?(?=\s|$)', '', clean)
+                clean = re.sub(r'Points:\s*\d+', '', clean)
+                clean = re.sub(r'# Comments:\s*\d+', '', clean)
+                clean = re.sub(r'Announce Type:.*?Abstract:', '', clean)
+                clean = re.sub(r'arXiv:\S+\s*', '', clean)
+                clean = clean.strip()
+                summary = textwrap.shorten(clean, width=200, placeholder="...") if clean else ""
                 entries.append((source_name, title, link, summary))
         except Exception as e:
             entries.append((source_name, f"[Feed error: {e}]", "", ""))
