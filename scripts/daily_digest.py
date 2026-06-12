@@ -11,6 +11,29 @@ import textwrap
 import feedparser
 import requests
 
+# ── Translator (免费 Google Translate) ────────────────────────────────
+
+_TRANSLATE_CACHE = {}
+
+def translate(text, target="zh-CN"):
+    """通过 Google Translate 免费接口翻译文本"""
+    if not text or len(text) < 3:
+        return text
+    cache_key = f"{text}:{target}"
+    if cache_key in _TRANSLATE_CACHE:
+        return _TRANSLATE_CACHE[cache_key]
+    try:
+        url = "https://translate.googleapis.com/translate_a/single"
+        params = {"client": "gtx", "sl": "auto", "tl": target, "dt": "t", "q": text[:2000]}
+        r = requests.get(url, params=params, timeout=5)
+        if r.status_code == 200:
+            result = "".join(part[0] for part in r.json()[0] if part[0])
+            _TRANSLATE_CACHE[cache_key] = result
+            return result
+    except Exception:
+        pass
+    return text  # 翻译失败则返回原文
+
 # ── Config ──────────────────────────────────────────────────────────────
 
 GH_TOKEN = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
@@ -98,7 +121,9 @@ def format_repo(item):
     lines = [line]
     if desc:
         short_desc = textwrap.shorten(desc, width=140, placeholder="...")
-        lines.append(f"  📝 {short_desc}")
+        # 翻译为中文
+        cn_desc = translate(short_desc)
+        lines.append(f"  📝 {cn_desc}")
     if topics:
         topic_tags = " ".join(f"`{t}`" for t in topics[:5])
         lines.append(f"  🏷️ {topic_tags}")
@@ -137,6 +162,9 @@ def fetch_news():
                 clean = html.unescape(clean)
                 clean = clean.strip()
                 summary = textwrap.shorten(clean, width=200, placeholder="...") if clean else ""
+                # 翻译摘要为中文
+                if summary:
+                    summary = translate(summary)
                 entries.append((source_name, title, link, summary))
         except Exception as e:
             entries.append((source_name, f"[Feed error: {e}]", "", ""))
@@ -199,10 +227,12 @@ def build_digest(projects, news):
             lines.append(f"### {source}")
             lines.append("")
             current_source = source
+        # 翻译标题
+        cn_title = translate(title)
         if link:
-            lines.append(f"- **[{title}]({link})**")
+            lines.append(f"- **[{cn_title}]({link})**")
         else:
-            lines.append(f"- **{title}**")
+            lines.append(f"- **{cn_title}**")
         if summary:
             lines.append(f"  > {summary}")
         lines.append("")
