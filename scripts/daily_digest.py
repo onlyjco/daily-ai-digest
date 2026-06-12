@@ -2,6 +2,7 @@
 """Daily AI Digest — GitHub trending projects + AI news, delivered as a GitHub Issue."""
 
 import datetime
+import html
 import os
 import re
 import sys
@@ -132,6 +133,8 @@ def fetch_news():
                 clean = re.sub(r'# Comments:\s*\d+', '', clean)
                 clean = re.sub(r'Announce Type:.*?Abstract:', '', clean)
                 clean = re.sub(r'arXiv:\S+\s*', '', clean)
+                # 清理 HTML 实体
+                clean = html.unescape(clean)
                 clean = clean.strip()
                 summary = textwrap.shorten(clean, width=200, placeholder="...") if clean else ""
                 entries.append((source_name, title, link, summary))
